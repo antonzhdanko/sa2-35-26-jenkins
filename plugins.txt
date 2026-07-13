@@ -1,0 +1,15 @@
+ansicolor
+blueocean
+configuration-as-code
+credentials-binding
+email-ext
+git
+github
+kubernetes
+mailer
+matrix-auth
+pipeline-stage-view
+rebuild
+slack
+ssh-agent
+workflow-aggregator
