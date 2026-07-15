@@ -29,7 +29,8 @@ spec:
             - |
               set -eu
               npm install --global smee-client
-              exec smee --url "$SMEE_URL" --target "$JENKINS_WEBHOOK"
+              smee --url "$SMEE_URL" --target "$JENKINS_WEBHOOK" 2>&1 |
+                sed -E 's#https://smee.io/[A-Za-z0-9]+#[redacted-smee-channel]#g'
           env:
             - name: SMEE_URL
               valueFrom:
