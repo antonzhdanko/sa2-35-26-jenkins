@@ -62,17 +62,17 @@ data:
           TODAY="$(date +%F)"
           YEAR="$(date +%Y)"
 
-          echo "Date: ${TODAY}"
+          echo "Date: ^${TODAY}"
           echo "=== Belarus holiday check ==="
 
           HOLIDAYS="$(curl --fail --silent --show-error \
-            "https://tallyfy.com/national-holidays/api/BY/${YEAR}.json")"
-          HOLIDAY_NAME="$(printf '%s' "${HOLIDAYS}" | jq -r \
-            --arg today "${TODAY}" \
+            "https://tallyfy.com/national-holidays/api/BY/^${YEAR}.json")"
+          HOLIDAY_NAME="$(printf '%s' "^${HOLIDAYS}" | jq -r \
+            --arg today "^${TODAY}" \
             '.holidays[]? | select(.date == $today) | .name' | head -n 1)"
 
-          if [ -n "${HOLIDAY_NAME}" ]; then
-            echo "Today is a public holiday in Belarus: ${HOLIDAY_NAME}"
+          if [ -n "^${HOLIDAY_NAME}" ]; then
+            echo "Today is a public holiday in Belarus: ^${HOLIDAY_NAME}"
           else
             echo "Today is not a public holiday in Belarus."
           fi
@@ -82,8 +82,8 @@ data:
             'https://api.nbrb.by/exrates/rates?periodicity=0')"
 
           for CODE in USD EUR RUB; do
-            printf '%s' "${RATES}" | jq -r --arg code "${CODE}" \
-              '.[] | select(.Cur_Abbreviation == $code) | "\(.Cur_Scale) \(.Cur_Abbreviation) = \(.Cur_OfficialRate) BYN"'
+            printf '%s' "^${RATES}" | jq -r --arg code "^${CODE}" \
+              '.[] | select(.Cur_Abbreviation == $code) | "\\(.Cur_Scale) \\(.Cur_Abbreviation) = \\(.Cur_OfficialRate) BYN"'
           done
           ''')
             }
