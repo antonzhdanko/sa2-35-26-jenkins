@@ -15,7 +15,7 @@ data:
           users:
             - id: "${JENKINS_ADMIN_ID}"
               password: "${JENKINS_ADMIN_PASSWORD}"
-            - id: "viewer"
+            - id: {{ .Values.viewer.username | quote }}
               name: "Homework Read Only User"
               password: "${JENKINS_VIEWER_PASSWORD}"
       authorizationStrategy:
@@ -26,7 +26,7 @@ data:
                 permissions:
                   - "Overall/Administer"
             - user:
-                name: "viewer"
+                name: {{ .Values.viewer.username | quote }}
                 permissions:
                   - "Overall/Read"
                   - "Job/Read"
