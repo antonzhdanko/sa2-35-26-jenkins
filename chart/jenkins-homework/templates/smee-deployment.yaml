@@ -1,0 +1,48 @@
+{{- if .Values.smee.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jenkins-homework.fullname" . }}-smee
+  labels:
+    app.kubernetes.io/name: smee-client
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: webhook-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: smee-client
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: webhook-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: smee-client
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: webhook-relay
+    spec:
+      containers:
+        - name: smee-client
+          image: {{ .Values.smee.image | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              npm install --global smee-client
+              exec smee --url "$SMEE_URL" --target "$JENKINS_WEBHOOK"
+          env:
+            - name: SMEE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "smee.existingSecret is required" .Values.smee.existingSecret }}
+                  key: {{ .Values.smee.urlKey }}
+            - name: JENKINS_WEBHOOK
+              value: {{ printf "http://%s:%v/github-webhook/" (include "jenkins-homework.fullname" .) .Values.service.httpPort | quote }}
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+{{- end }}

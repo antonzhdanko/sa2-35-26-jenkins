@@ -44,6 +44,11 @@ spec:
                 secretKeyRef:
                   name: {{ required "viewer.existingSecret is required" .Values.viewer.existingSecret }}
                   key: {{ .Values.viewer.passwordKey }}
+            - name: JENKINS_AUTOMATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "automation.existingSecret is required" .Values.automation.existingSecret }}
+                  key: {{ .Values.automation.passwordKey }}
           ports:
             - name: http
               containerPort: {{ .Values.service.httpPort }}

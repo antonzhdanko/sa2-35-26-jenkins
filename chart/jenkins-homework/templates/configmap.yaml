@@ -18,6 +18,9 @@ data:
             - id: {{ .Values.viewer.username | quote }}
               name: "Homework Read Only User"
               password: "${JENKINS_VIEWER_PASSWORD}"
+            - id: {{ .Values.automation.username | quote }}
+              name: "GitHub Actions API User"
+              password: "${JENKINS_AUTOMATION_PASSWORD}"
       authorizationStrategy:
         globalMatrix:
           entries:
@@ -30,6 +33,12 @@ data:
                 permissions:
                   - "Overall/Read"
                   - "Job/Read"
+            - user:
+                name: {{ .Values.automation.username | quote }}
+                permissions:
+                  - "Overall/Read"
+                  - "Job/Read"
+                  - "Job/Build"
       {{- if .Values.jenkins.kubernetes.enabled }}
       clouds:
         - kubernetes:
@@ -46,6 +55,60 @@ data:
         adminAddress: {{ .Values.admin.email | quote }}
         url: {{ .Values.jenkins.url | quote }}
     jobs:
+      - script: |
+          job('user-existence-check') {
+            description('Checks whether a requested local user exists in /etc/passwd')
+            parameters {
+              stringParam('USERNAME', 'root', 'Linux user name to check')
+            }
+            logRotator {
+              numToKeep(30)
+            }
+            steps {
+              shell('''#!/bin/sh
+          set -eu
+
+          case "^${USERNAME}" in
+            ''|*[!A-Za-z0-9._-]*)
+              echo "Invalid user name: only letters, digits, dot, underscore and dash are allowed."
+              exit 2
+              ;;
+          esac
+
+          if awk -F: -v username="^${USERNAME}" '$1 == username { found=1 } END { exit !found }' /etc/passwd; then
+            echo "User '^${USERNAME}' exists in /etc/passwd."
+          else
+            echo "User '^${USERNAME}' does not exist in /etc/passwd."
+          fi
+          ''')
+            }
+          }
+      - script: |
+          job('github-main-webhook') {
+            description('Clones the homework repository after GitHub pushes to the main branch')
+            scm {
+              git {
+                remote {
+                  url({{ .Values.jobs.repositoryUrl | quote }})
+                }
+                branch({{ printf "*/%s" .Values.jobs.repositoryBranch | quote }})
+              }
+            }
+            triggers {
+              githubPush()
+            }
+            logRotator {
+              numToKeep(30)
+            }
+            steps {
+              shell('''#!/bin/sh
+          set -eu
+          echo "Webhook build for branch: ^${GIT_BRANCH}"
+          echo "Commit: ^${GIT_COMMIT}"
+          git log -1 --pretty='format:Author: %an%nSubject: %s'
+          ''')
+            }
+          }
       - script: |
           job('belarus-daily-info') {
             description('Daily Belarus holiday check and official exchange rates')

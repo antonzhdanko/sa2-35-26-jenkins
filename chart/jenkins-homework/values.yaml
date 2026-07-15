@@ -19,6 +19,17 @@ viewer:
   existingSecret: jenkins-viewer
   passwordKey: password
 
+automation:
+  username: automation
+  existingSecret: jenkins-automation
+  passwordKey: password
+
+smee:
+  enabled: true
+  existingSecret: jenkins-smee
+  urlKey: url
+  image: node:22-alpine
+
 jenkins:
   url: http://jenkins.k8s-3.sa/
   numExecutors: 2
@@ -27,6 +38,10 @@ jenkins:
     enabled: true
     containerCap: 10
     maxRequestsPerHost: 32
+
+jobs:
+  repositoryUrl: https://github.com/antonzhdanko/sa2-35-26-jenkins.git
+  repositoryBranch: main
 
 serviceAccount:
   create: true
