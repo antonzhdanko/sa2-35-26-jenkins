@@ -17,7 +17,8 @@ spec:
           value: tcp://localhost:2375
       volumeMounts:
         - name: docker-config
-          mountPath: /root/.docker
+          mountPath: /root/.docker/config.json
+          subPath: config.json
           readOnly: true
     - name: dind
       image: docker:27.5.1-dind
@@ -220,7 +221,7 @@ spec:
       }
     }
     cleanup {
-      cleanWs(deleteDirs: true, notFailBuild: true)
+      deleteDir()
     }
   }
 }
