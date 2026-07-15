@@ -38,7 +38,8 @@ spec:
                   name: {{ required "smee.existingSecret is required" .Values.smee.existingSecret }}
                   key: {{ .Values.smee.urlKey }}
             - name: JENKINS_WEBHOOK
-              value: {{ printf "http://%s:%v/github-webhook/" (include "jenkins-homework.fullname" .) .Values.service.httpPort | quote }}
+              # Smee Client removes one trailing slash from its target URL.
+              value: {{ printf "http://%s:%v/github-webhook//" (include "jenkins-homework.fullname" .) .Values.service.httpPort | quote }}
           resources:
             requests:
               cpu: 25m
