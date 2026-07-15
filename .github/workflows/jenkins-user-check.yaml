@@ -34,10 +34,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          cookies="$(mktemp)"
+
           jenkins_curl() {
             curl --silent --show-error --fail-with-body \
               --resolve "${JENKINS_HOST}:80:${JENKINS_IP}" \
               --user "${JENKINS_USER}:${JENKINS_PASSWORD}" \
+              --cookie "$cookies" \
+              --cookie-jar "$cookies" \
               "$@"
           }
 
