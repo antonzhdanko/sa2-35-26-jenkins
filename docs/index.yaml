@@ -3,7 +3,17 @@ entries:
   jenkins-homework:
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.173931+03:00"
+    created: "2026-07-15T12:12:02.436372+03:00"
+    description: Jenkins controller with JCasC and Kubernetes agents
+    digest: 169819a6a51460311c200ae1bdd1c013ac8dd104c583a2cad70ef22f63ee1efb
+    name: jenkins-homework
+    type: application
+    urls:
+    - https://antonzhdanko.github.io/sa2-35-26-jenkins/jenkins-homework-0.1.7.tgz
+    version: 0.1.7
+  - apiVersion: v2
+    appVersion: lts-jdk21
+    created: "2026-07-15T12:12:02.435906+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: 39a3f0efe758528f9c69b0e24c56587214639cbb63e94db941ac28fff7be3301
     name: jenkins-homework
@@ -13,7 +23,7 @@ entries:
     version: 0.1.6
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.172636+03:00"
+    created: "2026-07-15T12:12:02.435418+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: ece6f811a92a20a285315112f3c6d3d0f7c22e16bfecc4b41cbe4e850f1718de
     name: jenkins-homework
@@ -23,7 +33,7 @@ entries:
     version: 0.1.5
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.172096+03:00"
+    created: "2026-07-15T12:12:02.434912+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: 4ad81d094c40947b282679e128d7be013c758bafe892fd240be95c4bf2bc347e
     name: jenkins-homework
@@ -33,7 +43,7 @@ entries:
     version: 0.1.4
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.171553+03:00"
+    created: "2026-07-15T12:12:02.434457+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: 73d459e41a554bb105990e007b22a4664107030f4a188d6d7f327df51b22d1ac
     name: jenkins-homework
@@ -43,7 +53,7 @@ entries:
     version: 0.1.3
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.171086+03:00"
+    created: "2026-07-15T12:12:02.434034+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: fac3bf667d2b1a631e51c7b106957d11197dd637a525939e321682d9e7b7ef4b
     name: jenkins-homework
@@ -53,7 +63,7 @@ entries:
     version: 0.1.2
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.170617+03:00"
+    created: "2026-07-15T12:12:02.433606+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: a69757e620933850c35a4ea4c8eb8abc2e80ec8f72d18674e3dfbccdcc9a96ce
     name: jenkins-homework
@@ -63,7 +73,7 @@ entries:
     version: 0.1.1
   - apiVersion: v2
     appVersion: lts-jdk21
-    created: "2026-07-15T11:54:19.170145+03:00"
+    created: "2026-07-15T12:12:02.433133+03:00"
     description: Jenkins controller with JCasC and Kubernetes agents
     digest: 040813a37d5904be403d0010b467ff8e7c8e1b112f09af379de0baf5e9549f50
     name: jenkins-homework
@@ -71,4 +81,4 @@ entries:
     urls:
     - https://antonzhdanko.github.io/sa2-35-26-jenkins/jenkins-homework-0.1.0.tgz
     version: 0.1.0
-generated: "2026-07-15T11:54:19.169556+03:00"
+generated: "2026-07-15T12:12:02.432585+03:00"

@@ -54,7 +54,33 @@ data:
       location:
         adminAddress: {{ .Values.admin.email | quote }}
         url: {{ .Values.jenkins.url | quote }}
+    credentials:
+      system:
+        domainCredentials:
+          - credentials:
+              - string:
+                  scope: GLOBAL
+                  id: "slack-webhook-url"
+                  description: "Slack webhook for Jenkins pipeline notifications"
+                  secret: "${JENKINS_SLACK_WEBHOOK}"
     jobs:
+      - script: |
+          pipelineJob('docker-pod-pipeline') {
+            description('Build, test, publish and promote the Homework 21 application')
+            definition {
+              cpsScm {
+                scm {
+                  git {
+                    remote {
+                      url({{ .Values.jobs.repositoryUrl | quote }})
+                    }
+                    branch({{ printf "*/%s" .Values.jobs.repositoryBranch | quote }})
+                  }
+                }
+                scriptPath('pipeline-app/Jenkinsfile')
+              }
+            }
+          }
       - script: |
           job('user-existence-check') {
             description('Checks whether a requested local user exists in /etc/passwd')

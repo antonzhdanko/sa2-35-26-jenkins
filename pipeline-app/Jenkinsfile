@@ -1,0 +1,220 @@
+pipeline {
+  agent {
+    kubernetes {
+      defaultContainer 'docker'
+      yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins-gitops
+  containers:
+    - name: docker
+      image: docker:27.5.1-cli
+      command: ["cat"]
+      tty: true
+      env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2375
+      volumeMounts:
+        - name: docker-config
+          mountPath: /root/.docker
+          readOnly: true
+    - name: dind
+      image: docker:27.5.1-dind
+      securityContext:
+        privileged: true
+      args:
+        - --host=tcp://0.0.0.0:2375
+        - --tls=false
+      volumeMounts:
+        - name: docker-storage
+          mountPath: /var/lib/docker
+    - name: hadolint
+      image: hadolint/hadolint:v2.14.0-alpine
+      command: ["cat"]
+      tty: true
+    - name: kubectl
+      image: alpine/k8s:1.35.0
+      command: ["cat"]
+      tty: true
+  volumes:
+    - name: docker-storage
+      emptyDir: {}
+    - name: docker-config
+      secret:
+        secretName: jenkins-registry
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+'''
+    }
+  }
+
+  environment {
+    IMAGE_REPOSITORY = 'jfrog.it-academy.by/public/jenkins-routine-app'
+    IMAGE_TAG = "${BUILD_NUMBER}"
+    APPLICATION_NAME = 'jenkins-pipeline-app'
+  }
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    timeout(time: 30, unit: 'MINUTES')
+    timestamps()
+  }
+
+  stages {
+    stage('Checkout code') {
+      steps {
+        checkout scm
+        dir('pipeline-app') {
+          sh 'test -f Dockerfile && test -f index.html'
+        }
+      }
+    }
+
+    stage('Validate Dockerfile') {
+      steps {
+        container('hadolint') {
+          dir('pipeline-app') {
+            sh 'hadolint Dockerfile'
+          }
+        }
+      }
+    }
+
+    stage('Build image') {
+      steps {
+        dir('pipeline-app') {
+          sh '''
+            set -eu
+            until docker info >/dev/null 2>&1; do sleep 1; done
+            docker build --pull --tag "${IMAGE_REPOSITORY}:${IMAGE_TAG}" .
+          '''
+        }
+      }
+    }
+
+    stage('Test image') {
+      steps {
+        sh '''
+          set -eu
+          docker rm --force app-test >/dev/null 2>&1 || true
+          docker run --detach --name app-test --publish 8080:8080 \
+            "${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+          for attempt in $(seq 1 30); do
+            if docker run --rm --network host curlimages/curl:8.12.1 \
+              --fail --silent http://127.0.0.1:8080/ | grep -q 'Jenkins pipeline application'; then
+              echo 'Application WebUI test: SUCCESS'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Application WebUI test: FAILED'
+          docker logs app-test
+          exit 1
+        '''
+      }
+      post {
+        always {
+          sh 'docker rm --force app-test >/dev/null 2>&1 || true'
+        }
+      }
+    }
+
+    stage('Push image') {
+      steps {
+        sh 'docker push "${IMAGE_REPOSITORY}:${IMAGE_TAG}"'
+      }
+    }
+
+    stage('Deploy pre-prod') {
+      steps {
+        container('kubectl') {
+          sh '''
+            set -eu
+            kubectl -n pre-prod create deployment "${APPLICATION_NAME}" \
+              --image="${IMAGE_REPOSITORY}:${IMAGE_TAG}" \
+              --dry-run=client -o yaml | kubectl apply -f -
+            kubectl -n pre-prod expose deployment "${APPLICATION_NAME}" \
+              --port=8080 --target-port=8080 \
+              --dry-run=client -o yaml | kubectl apply -f -
+            kubectl -n pre-prod rollout status deployment/"${APPLICATION_NAME}" --timeout=180s
+            response=$(kubectl -n pre-prod run "web-test-${BUILD_NUMBER}" \
+              --image=curlimages/curl:8.12.1 --restart=Never --rm --attach \
+              --command -- curl --fail --silent \
+              "http://${APPLICATION_NAME}:8080/")
+            echo "$response" | grep -q 'Jenkins pipeline application'
+            echo 'Pre-production deployment test: SUCCESS'
+          '''
+        }
+      }
+    }
+
+    stage('Approve production') {
+      steps {
+        input message: 'Pre-production is healthy. Deploy this image to production?',
+          ok: 'Deploy to prod',
+          submitter: 'admin'
+      }
+    }
+
+    stage('Deploy prod') {
+      steps {
+        container('kubectl') {
+          sh '''
+            set -eu
+            kubectl -n prod create deployment "${APPLICATION_NAME}" \
+              --image="${IMAGE_REPOSITORY}:${IMAGE_TAG}" \
+              --dry-run=client -o yaml | kubectl apply -f -
+            kubectl -n prod expose deployment "${APPLICATION_NAME}" \
+              --port=8080 --target-port=8080 \
+              --dry-run=client -o yaml | kubectl apply -f -
+            kubectl -n prod rollout status deployment/"${APPLICATION_NAME}" --timeout=180s
+            response=$(kubectl -n prod run "web-test-${BUILD_NUMBER}" \
+              --image=curlimages/curl:8.12.1 --restart=Never --rm --attach \
+              --command -- curl --fail --silent \
+              "http://${APPLICATION_NAME}:8080/")
+            echo "$response" | grep -q 'Jenkins pipeline application'
+            echo 'Production deployment test: SUCCESS'
+          '''
+        }
+      }
+    }
+
+    stage('Clean pre-prod') {
+      steps {
+        container('kubectl') {
+          sh '''
+            kubectl -n pre-prod delete deployment,service \
+              -l app="${APPLICATION_NAME}" --ignore-not-found
+            kubectl -n pre-prod delete deployment "${APPLICATION_NAME}" --ignore-not-found
+            kubectl -n pre-prod delete service "${APPLICATION_NAME}" --ignore-not-found
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        def color = currentBuild.currentResult == 'SUCCESS' ? '#2EB67D' : '#E01E5A'
+        def message = "Jenkins pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER}: ${currentBuild.currentResult}"
+        container('kubectl') {
+          withCredentials([string(credentialsId: 'slack-webhook-url', variable: 'SLACK_WEBHOOK_URL')]) {
+            sh """
+              payload=\$(printf '%s' '${message}' | jq -Rs --arg color '${color}' \
+                '{attachments:[{color:\$color,text:.}]}')
+              curl --fail --silent --show-error \
+                -H 'Content-Type: application/json' \
+                --data \"\$payload\" \"\$SLACK_WEBHOOK_URL\"
+            """
+          }
+        }
+      }
+    }
+    cleanup {
+      cleanWs(deleteDirs: true, notFailBuild: true)
+    }
+  }
+}

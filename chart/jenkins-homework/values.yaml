@@ -30,6 +30,10 @@ smee:
   urlKey: url
   image: node:22-alpine
 
+notification:
+  slackExistingSecret: jenkins-slack
+  slackUrlKey: url
+
 jenkins:
   url: http://jenkins.k8s-3.sa/
   numExecutors: 2

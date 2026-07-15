@@ -1,0 +1,49 @@
+name: Seal Jenkins registry credential
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create encrypted SealedSecret manifest
+        env:
+          JFROG_PASS: ${{ secrets.JFROG_PASS }}
+          SEALED_SECRETS_CERT: ${{ secrets.SEALED_SECRETS_CERT }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$SEALED_SECRETS_CERT" > sealed-secrets-cert.pem
+          curl --fail --silent --show-error --location \
+            --output kubeseal.tar.gz \
+            https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-linux-amd64.tar.gz
+          tar -xzf kubeseal.tar.gz kubeseal
+
+          auth="$(printf 'sa:%s' "$JFROG_PASS" | base64 --wrap=0)"
+          docker_config="$(jq --compact-output --null-input \
+            --arg username sa --arg password "$JFROG_PASS" --arg auth "$auth" \
+            '{auths:{"jfrog.it-academy.by":{username:$username,password:$password,auth:$auth}}}')"
+          encrypted="$(printf '%s' "$docker_config" | ./kubeseal --raw \
+            --cert sealed-secrets-cert.pem \
+            --namespace jenkins-gitops \
+            --name jenkins-registry)"
+
+          jq --null-input --arg encrypted "$encrypted" '{
+            apiVersion:"bitnami.com/v1alpha1",
+            kind:"SealedSecret",
+            metadata:{name:"jenkins-registry",namespace:"jenkins-gitops"},
+            spec:{
+              encryptedData:{".dockerconfigjson":$encrypted},
+              template:{
+                metadata:{name:"jenkins-registry",namespace:"jenkins-gitops"},
+                type:"kubernetes.io/dockerconfigjson"
+              }
+            }
+          }' > jenkins-registry-sealedsecret.json
+
+      - name: Upload encrypted manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: jenkins-registry-sealedsecret
+          path: jenkins-registry-sealedsecret.json
+          retention-days: 1

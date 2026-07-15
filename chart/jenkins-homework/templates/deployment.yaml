@@ -49,6 +49,11 @@ spec:
                 secretKeyRef:
                   name: {{ required "automation.existingSecret is required" .Values.automation.existingSecret }}
                   key: {{ .Values.automation.passwordKey }}
+            - name: JENKINS_SLACK_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "notification.slackExistingSecret is required" .Values.notification.slackExistingSecret }}
+                  key: {{ .Values.notification.slackUrlKey }}
           ports:
             - name: http
               containerPort: {{ .Values.service.httpPort }}
