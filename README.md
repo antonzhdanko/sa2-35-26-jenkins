@@ -33,7 +33,7 @@ Install Jenkins with the homework defaults:
 
 ```bash
 helm upgrade --install jenkins anton-jenkins/jenkins-homework \
-  --version 0.1.0 \
+  --version 0.1.6 \
   --namespace ci-cd \
   --create-namespace \
   --set admin.username=admin \
@@ -54,3 +54,17 @@ Jenkins URL and Istio hosts, can be overridden there or with `--set`.
 helm lint chart/jenkins-homework
 helm template jenkins chart/jenkins-homework --namespace ci-cd
 ```
+
+## Jenkins routine automation
+
+The chart creates two Homework 20 jobs:
+
+- `user-existence-check` receives a user name from the
+  `Jenkins user existence check` GitHub Actions workflow and checks
+  `/etc/passwd` through the Jenkins API;
+- `github-main-webhook` tracks this repository's `main` branch and runs after
+  GitHub push events forwarded to the internal Jenkins service by Smee.
+
+The API user has only `Overall/Read`, `Job/Read` and `Job/Build`. Its password
+and the Smee channel are stored as GitHub/Kubernetes secrets, never as plain
+text in this repository.
