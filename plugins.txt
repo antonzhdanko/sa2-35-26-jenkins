@@ -1,13 +1,16 @@
 ansicolor
+ansible
 blueocean
 configuration-as-code
 credentials-binding
 email-ext
 git
 github
+job-dsl
 kubernetes
 mailer
 matrix-auth
+notify-events
 pipeline-stage-view
 rebuild
 slack

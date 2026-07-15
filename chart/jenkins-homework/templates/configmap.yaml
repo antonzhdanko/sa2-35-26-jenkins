@@ -15,9 +15,21 @@ data:
           users:
             - id: "${JENKINS_ADMIN_ID}"
               password: "${JENKINS_ADMIN_PASSWORD}"
+            - id: "viewer"
+              name: "Homework Read Only User"
+              password: "${JENKINS_VIEWER_PASSWORD}"
       authorizationStrategy:
-        loggedInUsersCanDoAnything:
-          allowAnonymousRead: false
+        globalMatrix:
+          entries:
+            - user:
+                name: "${JENKINS_ADMIN_ID}"
+                permissions:
+                  - "Overall/Administer"
+            - user:
+                name: "viewer"
+                permissions:
+                  - "Overall/Read"
+                  - "Job/Read"
       {{- if .Values.jenkins.kubernetes.enabled }}
       clouds:
         - kubernetes:
@@ -33,3 +45,46 @@ data:
       location:
         adminAddress: {{ .Values.admin.email | quote }}
         url: {{ .Values.jenkins.url | quote }}
+    jobs:
+      - script: |
+          job('belarus-daily-info') {
+            description('Daily Belarus holiday check and official exchange rates')
+            triggers {
+              cron('H H * * *')
+            }
+            logRotator {
+              numToKeep(30)
+            }
+            steps {
+              shell('''#!/bin/sh
+          set -eu
+
+          TODAY="$(date +%F)"
+          YEAR="$(date +%Y)"
+
+          echo "Date: ${TODAY}"
+          echo "=== Belarus holiday check ==="
+
+          HOLIDAYS="$(curl --fail --silent --show-error \
+            "https://tallyfy.com/national-holidays/api/BY/${YEAR}.json")"
+          HOLIDAY_NAME="$(printf '%s' "${HOLIDAYS}" | jq -r \
+            --arg today "${TODAY}" \
+            '.holidays[]? | select(.date == $today) | .name' | head -n 1)"
+
+          if [ -n "${HOLIDAY_NAME}" ]; then
+            echo "Today is a public holiday in Belarus: ${HOLIDAY_NAME}"
+          else
+            echo "Today is not a public holiday in Belarus."
+          fi
+
+          echo "=== National Bank of Belarus exchange rates ==="
+          RATES="$(curl --fail --silent --show-error \
+            'https://api.nbrb.by/exrates/rates?periodicity=0')"
+
+          for CODE in USD EUR RUB; do
+            printf '%s' "${RATES}" | jq -r --arg code "${CODE}" \
+              '.[] | select(.Cur_Abbreviation == $code) | "\(.Cur_Scale) \(.Cur_Abbreviation) = \(.Cur_OfficialRate) BYN"'
+          done
+          ''')
+            }
+          }

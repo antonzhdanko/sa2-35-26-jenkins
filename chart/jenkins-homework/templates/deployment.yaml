@@ -39,6 +39,11 @@ spec:
                 secretKeyRef:
                   name: {{ required "admin.existingSecret is required" .Values.admin.existingSecret }}
                   key: {{ .Values.admin.passwordKey }}
+            - name: JENKINS_VIEWER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "admin.existingSecret is required" .Values.admin.existingSecret }}
+                  key: {{ .Values.admin.passwordKey }}
           ports:
             - name: http
               containerPort: {{ .Values.service.httpPort }}
